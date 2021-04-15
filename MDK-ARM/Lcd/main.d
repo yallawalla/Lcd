@@ -31,5 +31,6 @@ lcd\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c_ex.h
 lcd\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h
 lcd\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h
 lcd\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+lcd\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 lcd\main.o: ..\lcdlib\src\stm32f4_discovery_lcd.h
 lcd\main.o: ..\lcdlib\src\fonts.h

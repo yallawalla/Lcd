@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include	<stdio.h>
+#include	<string.h>
 #include	"stm32f4_discovery_lcd.h"
 
 /* USER CODE END Includes */
@@ -56,42 +57,31 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
-uint8_t buf[256], x, y;
-void print(uint32_t n) {
-	char c[32];
-	sprintf(c,"%02X %02X", n>>8, n & 0xff);
-	do {
-		LCD_DisplayChar(12*y,8*x,c[x]);
-	} while(c[++x]);
-	x=0;
-	y=(y+1) % 16;
-}
-
-
-void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c) {
-	if(buf[0]==0 && (buf[1] & 0xf0)==0xB0)
-		y=(buf[1] & 0x0f)*8;
-	if(buf[0]==0 && buf[1]==0x10) 
-		HAL_I2C_Slave_Receive_DMA(&hi2c1,buf,129);
-	else
-		HAL_I2C_Slave_Receive_DMA(&hi2c1,buf,2);
-	if(buf[0]==0x40)
-		for(int j=0; j<8; ++j) {
-			for(int i=1; i<129; ++i) {
-				if(buf[i] & (0x01<<j))
-					LCD_SetTextColor(LCD_COLOR_YELLOW);
-				else
-					LCD_SetTextColor(LCD_COLOR_BLACK);
-				LCD_DrawLine(i,y+j,1,0);
-//				LCD_DrawCircle(i,y+j,1);
-			}
-		}
-}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint8_t lcd[128*8], buf[256];
+uint8_t	page=0,flag=0;
 
+void	HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c) {
+	HAL_I2C_Slave_Receive_DMA(&hi2c1,buf,2);
+}
+
+void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	if(flag == 1) {
+		flag=0;
+		memcpy(&lcd[page*128],&buf[1],128);
+		HAL_I2C_Slave_Receive_DMA(&hi2c1,buf,2);
+	} else if(buf[0]==0 && (buf[1] & 0xf0)==0xB0) {
+		page=buf[1] & 0x0f;
+		HAL_I2C_Slave_Receive_DMA(&hi2c1,&buf[0],2);
+	} else if(buf[0]==0 && buf[1]==0x10) {
+		flag=1;
+		HAL_I2C_Slave_Receive_DMA(&hi2c1,&buf[0],129);
+	} else
+		HAL_I2C_Slave_Receive_DMA(&hi2c1,&buf[0],2);
+}
 /* USER CODE END 0 */
 
 /**
@@ -126,11 +116,11 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 	STM32f4_Discovery_LCD_Init();
-	LCD_SetBackColor(LCD_COLOR_BLUE);
+	LCD_SetBackColor(LCD_COLOR_BLACK);
 	LCD_SetTextColor(LCD_COLOR_YELLOW);
 	LCD_SetFont(&Font8x12);
-	LCD_Clear(LCD_COLOR_BLUE);
-
+	LCD_Clear(LCD_COLOR_BLACK);
+	
 	HAL_I2C_Slave_Receive_DMA(&hi2c1,buf,2);
   /* USER CODE END 2 */
 
@@ -138,6 +128,16 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		for(int j=0; j<64; ++j) {
+			LCD_SetCursor(0, j); 
+			LCD_WriteRAM_Prepare();
+			for(int i=0; i<128; ++i)	{
+				if(lcd[i + 128*(j/8)] & (0x01<<(j%8)))
+					LCD_WriteRAM(LCD_COLOR_YELLOW);
+				else
+					LCD_WriteRAM(LCD_COLOR_BLACK);
+			}
+		}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
